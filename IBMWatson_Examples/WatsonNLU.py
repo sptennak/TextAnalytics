@@ -2,7 +2,7 @@
 """
 Created on Fri May 18 22:15:35 2018
 
-@author: stennakoon
+@author: Sumudu Tennakoon
 """
 
 from watson_developer_cloud import NaturalLanguageUnderstandingV1, WatsonException, WatsonApiException
