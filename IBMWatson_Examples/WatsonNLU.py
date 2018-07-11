@@ -3,6 +3,8 @@
 Created on Fri May 18 22:15:35 2018
 
 @author: Sumudu Tennakoon
+References:
+[1] https://www.ibm.com/watson/developercloud/natural-language-understanding/api/v1/
 """
 
 from watson_developer_cloud import NaturalLanguageUnderstandingV1, WatsonException, WatsonApiException
@@ -12,7 +14,6 @@ import numpy as np
 from timeit import default_timer as timer
 import multiprocessing
 import sys
-import traceback
 
 ###############################################################################
 def IAM_Auth(APIKey, Version):
