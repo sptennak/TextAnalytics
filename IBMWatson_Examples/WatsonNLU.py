@@ -12,32 +12,33 @@ import numpy as np
 from timeit import default_timer as timer
 import multiprocessing
 import sys
+import traceback
 
 ###############################################################################
 def IAM_Auth(APIKey, Version):
-	ServiceAuthentication = NaturalLanguageUnderstandingV1(
-		version= Version,
-		iam_api_key= APIKey
-	)
-	ServiceAuthentication.set_url('https://gateway-fra.watsonplatform.net/natural-language-understanding/api')
+    ServiceAuthentication = NaturalLanguageUnderstandingV1(
+        version= Version,
+        iam_api_key= APIKey
+    )
+    ServiceAuthentication.set_url('https://gateway-fra.watsonplatform.net/natural-language-understanding/api')
     #To prevent IBM from accessing user input and Watson responses... https://www.ibm.com/watson/developercloud/conversation/api/v1/python.html?python#data-collection
     ServiceAuthentication.set_default_headers({'x-watson-learning-opt-out': "true"}) 
-	return ServiceAuthentication
+    return ServiceAuthentication
 
-def Basic_Auth(UserName, Password, Version)
-	ServiceAuthentication = NaturalLanguageUnderstandingV1(
-		version= Version,
-		username= UserName,
-		password= Password
-	)
-	ServiceAuthentication.set_url('https://gateway-fra.watsonplatform.net/natural-language-understanding/api')
+def Basic_Auth(UserName, Password, Version):
+    ServiceAuthentication = NaturalLanguageUnderstandingV1(
+        version= Version,
+        username= UserName,
+        password= Password
+    )
+    ServiceAuthentication.set_url('https://gateway-fra.watsonplatform.net/natural-language-understanding/api')
     #To prevent IBM from accessing user input and Watson responses... https://www.ibm.com/watson/developercloud/conversation/api/v1/python.html?python#data-collection
     ServiceAuthentication.set_default_headers({'x-watson-learning-opt-out': "true"}) 
-	return ServiceAuthentication
+    return ServiceAuthentication
 ###############################################################################
 
 def TextNLU(ServiceAuthentication, TextID, Text, ModelID=None, Emotion=False, Sentiment=False, Mentions =False, EntityLimit=50, TextLimit=50000, ReturnText=True):
-	Notes = ''	
+    Notes = ''	
     try:
         Response = ServiceAuthentication.analyze(
             text=Text,
@@ -48,54 +49,50 @@ def TextNLU(ServiceAuthentication, TextID, Text, ModelID=None, Emotion=False, Se
                 entities=EntitiesOptions(
                   emotion=Emotion,
                   sentiment=Sentiment,
-				  mentions=Mentions,
+                  mentions=Mentions,
                   model = ModelID,  
                   limit=EntityLimit				  
                 ),     
             ),
-			limit_text_characters = TextLimit, #https://console.bluemix.net/docs/services/natural-language-understanding/usage-limits.html#usage-limits
+            limit_text_characters = TextLimit, #https://console.bluemix.net/docs/services/natural-language-understanding/usage-limits.html#usage-limits
             return_analyzed_text=ReturnText    
         )
-		Notes='RECIEVED'
-    except WatsonException:  
-		Notes = str(WatsonException)
-		print('Watson NLU: WatsonException [{}]'.format(Response))
-	except WatsonApiException:
-		Notes = str(WatsonApiException)
-		print('Watson NLU: WatsonApiException [{}]'.format(Response))
-	except WatsonInvalidArgument:
-		Notes = str(WatsonInvalidArgument)
-		print('Watson NLU: WatsonInvalidArgument [{}]'.format(Response))	
-	except:
-		Notes = sys.exc_info()[0]
-		print('Watson NLU: Unexpected error [{}]'.format(Response))
-	Notes = 'NLU:'+Notes
-	
-	# Process Response Header
-	WatsonResponseHeader = pd.DataFrame({'TextID':[TextID]})
-    try:      	 
-        WatsonResponseHeader['Language'] = Response['language']
-        WatsonResponseHeader['CharacterCount'] = Response['usage']['text_characters'] #Number of characters processed
-        WatsonResponseHeader['NLUUnits'] = Response['usage']['text_units']	#Number of characters processed	
-		WatsonResponseHeader['Features'] = Response['usage']['features'] #Number of features used, such as entities, sentiment, etc.
-		WatsonResponseHeader['EntitiesCount'] = len(Response['entities'])
-        WatsonResponseHeader['AnalyzedText'] = Response['analyzed_text']		
+        Notes='RECIEVED'
     except:
-		Notes= Notes+ '\tHEADER:' + sys.exc_info()[0]		
-	
-	
-	# Process Response Details	
+        EXP = sys.exc_info()
+        Notes = str(EXP[0])+'['+''.join(EXP[1].args)+']'
+    Notes = 'NLU:'+Notes
+
+    # Process Response Header
+    WatsonResponseHeader = pd.DataFrame({'TextID':[TextID]})
+    try:      	 
+        WatsonResponseHeader['language'] = Response['language']
+        WatsonResponseHeader['text_characters'] = Response['usage']['text_characters'] #Number of characters processed
+        WatsonResponseHeader['text_units'] = Response['usage']['text_units']	#Number of characters processed	
+        WatsonResponseHeader['features'] = Response['usage']['features'] #Number of features used, such as entities, sentiment, etc.
+        WatsonResponseHeader['entities'] = len(Response['entities'])
+        WatsonResponseHeader['analyzed_text'] = Response['analyzed_text']		
+    except:
+        EXP = sys.exc_info()
+        Notes= Notes+ '\tHEADER:' + str(EXP[0])+'['+''.join(EXP[1].args)+']'	
+
+
+    # Process Response Details	
     try:
         if len(Response['entities']) != 0:
             WatsonResponseDetail = pd.DataFrame(Response['entities'])
-			WatsonResponseDetail.insert(0, 'EmailID', EmailID)
+            WatsonResponseDetail.insert(0, 'TextID', TextID)
+            if 'sentiment' in WatsonResponseDetail.columns:
+                Split= WatsonResponseDetail.sentiment.apply(pd.Series)
+                WatsonResponseDetail['sentiment_'+Split.columns]= Split
+                WatsonResponseDetail.drop('sentiment', axis=1, inplace=True)
         else:
             raise Exception('NO ENTITIES FOUND')
     except:
-        Notes= Notes+ '\DETAIL:' + sys.exc_info()[0]
-		WatsonResponseDetail = pd.DataFrame()
-		
-	WatsonResponseHeader['Notes'] = Notes	
-	
-	return WatsonResponseHeader, WatsonResponseDetail
-	
+        EXP = sys.exc_info()
+        Notes= Notes+ '\tDETAIL:' + str(EXP[0])+'['+''.join(EXP[1].args)+']'	
+        WatsonResponseDetail = pd.DataFrame()
+
+    WatsonResponseHeader['Notes'] = Notes	
+
+    return WatsonResponseHeader, WatsonResponseDetail
