@@ -30,10 +30,10 @@ def RemoveQuotedPrintableEncoding(Text):
 	#https://www.w3.org/Protocols/rfc1341/5_Content-Transfer-Encoding.html
 	#https://stackoverflow.com/questions/25710599/content-transfer-encoding-7bit-or-8-bit
     QPCTE = {
-            '= '    :'', #Soft line break (ignore).
+            '= '    :' ', #Soft line break (ignore).
             '==09'  :'', #Soft line break (ignore).
-            '==20'  :'', #Soft line break (ignore).  
-            '=\t'  :'', #Soft line break (ignore). 
+            '==20'  :' ', #Soft line break (ignore).  
+            '=\t'  :'\t', #Soft line break (ignore). 
             '=\n'  :'', #Soft line break (ignore). 			
             '=09'   :'\t',  
             '=0A'   :'\n',
